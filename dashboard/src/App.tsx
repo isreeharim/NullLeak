@@ -2,18 +2,23 @@ import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   Zap,
-  TrendingDown,
   Key,
   Terminal,
   Activity,
   Copy,
-  CheckCircle,
+  CheckCircle2,
   Plus,
   Trash2,
   Lock,
   RefreshCw,
+  Search,
+  Sparkles,
+  Layers,
+  ChevronRight,
   ArrowUpRight,
-  Database
+  Server,
+  CreditCard,
+  Fingerprint
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -77,15 +82,25 @@ export function App() {
   const [logs, setLogs] = useState<RequestLogItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Command Palette State
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [cmdSearch, setCmdSearch] = useState('');
+
+  // Selected audit log drawer
+  const [selectedLog, setSelectedLog] = useState<RequestLogItem | null>(null);
+
+  // Table filter state
+  const [logFilter, setLogFilter] = useState<'all' | 'hit' | 'pii'>('all');
+
   // Playground state
   const [sandboxPrompt, setSandboxPrompt] = useState(
-    'Hello, my user account email is alice.support@nullleak.com and my secret key is sk-live9876543210abcdef1234. Please help me reset my account password.'
+    'Please charge Visa card 4111 1111 1111 1111 and contact alice.support@nullleak.com. Master token: sk-live9876543210abcdef1234.'
   );
   const [sandboxModel, setSandboxModel] = useState('gpt-4o');
   const [sandboxResult, setSandboxResult] = useState<any>(null);
   const [isSandboxRunning, setIsSandboxRunning] = useState(false);
 
-  // New API key dialog state
+  // API Key creation modal state
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
   const [newKeyRpm, setNewKeyRpm] = useState('60');
@@ -112,21 +127,35 @@ export function App() {
 
   useEffect(() => {
     fetchAllData();
-    const interval = setInterval(fetchAllData, 5000); // 5s live polling
+    const interval = setInterval(fetchAllData, 5000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Keyboard shortcut for Cmd+K command palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandPalette((prev) => !prev);
+      }
+      if (e.key === 'Escape') {
+        setShowCommandPalette(false);
+        setSelectedLog(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const handleTestSandbox = async () => {
     setIsSandboxRunning(true);
     try {
-      // 1. Check Guardrails
       const testRes = await fetch('/api/v1/sandbox/test-guardrails', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: sandboxPrompt, model: sandboxModel }),
       }).then((r) => r.json());
 
-      // 2. Execute via Live Proxy to check caching & streaming
       const liveProxyRes = await fetch('/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -182,163 +211,181 @@ export function App() {
     fetchAllData();
   };
 
+  const filteredLogs = logs.filter((log) => {
+    if (logFilter === 'hit') return log.wasCacheHit;
+    if (logFilter === 'pii') return log.piiRedactedCount > 0;
+    return true;
+  });
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* Top Navbar */}
-      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-50 px-6 py-3.5 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-gradient-to-tr from-cyan-600 to-blue-500 rounded-lg shadow-md shadow-cyan-500/20">
-            <ShieldCheck className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-                NullLeak
-              </span>
-              <span className="text-[10px] uppercase font-semibold tracking-wider px-2 py-0.5 rounded-full bg-cyan-950/80 text-cyan-400 border border-cyan-800/60">
-                Gateway v1.0
-              </span>
+    <div className="min-h-screen bg-[#090a0f] text-slate-100 flex flex-col font-sans antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
+      {/* 1. Global Calm Header / Navbar (SaaS UI Pattern) */}
+      <header className="sticky top-0 z-40 w-full border-b border-white/[0.08] bg-[#090a0f]/80 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+          {/* Brand & Workspace Switcher */}
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow-inner shadow-white/20 border border-white/10">
+              <ShieldCheck className="w-4 h-4 text-white" />
             </div>
-            <p className="text-xs text-slate-400">Zero-Data-Leak AI Guardrail & Cost-Optimizer</p>
+            <div className="flex items-center space-x-2">
+              <span className="font-semibold text-sm tracking-tight text-white">NullLeak</span>
+              <span className="text-slate-600">/</span>
+              <div className="flex items-center space-x-1 px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.06] text-xs text-slate-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span className="font-medium">Production Gateway</span>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Navigation Tabs */}
-        <nav className="flex space-x-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+          {/* Quick Search / Command Palette Trigger (Linear/Attio pattern) */}
           <button
-            onClick={() => setActiveTab('overview')}
-            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
-              activeTab === 'overview'
-                ? 'bg-slate-800 text-cyan-400 shadow-sm shadow-slate-900'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+            onClick={() => setShowCommandPalette(true)}
+            className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-slate-400 text-xs transition duration-150"
           >
-            <Activity className="w-4 h-4" />
-            <span>Overview</span>
+            <Search className="w-3.5 h-3.5 text-slate-400" />
+            <span>Search or jump to...</span>
+            <kbd className="ml-3 font-mono text-[10px] px-1.5 py-0.5 rounded bg-white/[0.08] text-slate-300 border border-white/10">
+              ⌘K
+            </kbd>
           </button>
-          <button
-            onClick={() => setActiveTab('playground')}
-            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
-              activeTab === 'playground'
-                ? 'bg-slate-800 text-cyan-400 shadow-sm shadow-slate-900'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Terminal className="w-4 h-4" />
-            <span>Playground</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('keys')}
-            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
-              activeTab === 'keys'
-                ? 'bg-slate-800 text-cyan-400 shadow-sm shadow-slate-900'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Key className="w-4 h-4" />
-            <span>API Keys</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('logs')}
-            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
-              activeTab === 'logs'
-                ? 'bg-slate-800 text-cyan-400 shadow-sm shadow-slate-900'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Database className="w-4 h-4" />
-            <span>Audit Logs</span>
-          </button>
-        </nav>
 
-        {/* Quick status & refresh */}
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-400 text-xs font-medium">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>Gateway Online</span>
+          {/* Nav Tabs & Status */}
+          <div className="flex items-center space-x-3">
+            <nav className="flex space-x-1 p-1 bg-white/[0.03] rounded-lg border border-white/[0.06]">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition ${
+                  activeTab === 'overview'
+                    ? 'bg-white/[0.08] text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Activity className="w-3.5 h-3.5" />
+                <span>Overview</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('playground')}
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition ${
+                  activeTab === 'playground'
+                    ? 'bg-white/[0.08] text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Terminal className="w-3.5 h-3.5" />
+                <span>Sandbox</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('keys')}
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition ${
+                  activeTab === 'keys'
+                    ? 'bg-white/[0.08] text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Key className="w-3.5 h-3.5" />
+                <span>API Keys</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('logs')}
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition ${
+                  activeTab === 'logs'
+                    ? 'bg-white/[0.08] text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Audits</span>
+              </button>
+            </nav>
+
+            <button
+              onClick={fetchAllData}
+              title="Refresh"
+              className="p-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-slate-300 transition"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
-          <button
-            onClick={fetchAllData}
-            title="Refresh metrics"
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </button>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
+      {/* Main SaaS Shell */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            {/* Stat Cards */}
+            {/* Top SaaS Metric Cards (Attio / Mixpanel style) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-sm relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition"></div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-400">Total Dollars Saved</span>
-                  <div className="p-2 bg-emerald-950/60 rounded-lg text-emerald-400">
-                    <TrendingDown className="w-4 h-4" />
+              {/* Cost Savings Card */}
+              <div className="p-4 rounded-xl border border-white/[0.08] bg-[#11131c]/60 hover:border-white/[0.14] transition relative overflow-hidden group">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="font-medium">Total Cost Saved</span>
+                  <div className="p-1.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <Zap className="w-3.5 h-3.5" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-2xl font-bold text-white tracking-tight">
+                  <div className="text-2xl font-semibold text-white tracking-tight">
                     ${analytics?.savedCostUsd.toFixed(2) || '0.00'}
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">Saved via Redis semantic cache</p>
+                  <div className="flex items-center space-x-1 text-[11px] text-emerald-400 mt-1">
+                    <span>100% token cost bypass via semantic cache</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-sm relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition"></div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-400">Cache Hit Rate</span>
-                  <div className="p-2 bg-blue-950/60 rounded-lg text-blue-400">
-                    <Zap className="w-4 h-4" />
+              {/* Cache Hit Ratio Card */}
+              <div className="p-4 rounded-xl border border-white/[0.08] bg-[#11131c]/60 hover:border-white/[0.14] transition relative overflow-hidden group">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="font-medium">Cache Hit Rate</span>
+                  <div className="p-1.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    <Activity className="w-3.5 h-3.5" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-2xl font-bold text-white tracking-tight">
+                  <div className="text-2xl font-semibold text-white tracking-tight">
                     {((analytics?.cacheHitRate || 0) * 100).toFixed(1)}%
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {analytics?.cacheHits || 0} of {analytics?.totalRequests || 0} requests served in &lt;25ms
-                  </p>
+                  <div className="flex items-center space-x-1 text-[11px] text-slate-400 mt-1">
+                    <span>{analytics?.cacheHits || 0} hits of {analytics?.totalRequests || 0} total calls</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-sm relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition"></div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-400">PII Incidents Blocked</span>
-                  <div className="p-2 bg-rose-950/60 rounded-lg text-rose-400">
-                    <Lock className="w-4 h-4" />
+              {/* PII Blocked Card */}
+              <div className="p-4 rounded-xl border border-white/[0.08] bg-[#11131c]/60 hover:border-white/[0.14] transition relative overflow-hidden group">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="font-medium">PII & Secrets Scrubbed</span>
+                  <div className="p-1.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                    <Lock className="w-3.5 h-3.5" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-2xl font-bold text-white tracking-tight">
+                  <div className="text-2xl font-semibold text-white tracking-tight">
                     {analytics?.piiBlockedCount || 0}
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">Secrets, emails & cards scrubbed</p>
+                  <div className="flex items-center space-x-1 text-[11px] text-slate-400 mt-1">
+                    <span>Zero data leaks to upstream LLMs</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-sm relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition"></div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-400">Monthly Budget Burn</span>
-                  <div className="p-2 bg-purple-950/60 rounded-lg text-purple-400">
-                    <ArrowUpRight className="w-4 h-4" />
+              {/* Budget Limit Card */}
+              <div className="p-4 rounded-xl border border-white/[0.08] bg-[#11131c]/60 hover:border-white/[0.14] transition relative overflow-hidden group">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="font-medium">Monthly Spend Cap</span>
+                  <div className="p-1.5 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                    <ArrowUpRight className="w-3.5 h-3.5" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-2xl font-bold text-white tracking-tight">
-                    ${analytics?.currentMonthSpendUsd.toFixed(2) || '0.00'} / ${analytics?.monthlySpendLimitUsd || 250}
+                  <div className="text-2xl font-semibold text-white tracking-tight">
+                    ${analytics?.currentMonthSpendUsd.toFixed(2) || '0.00'}{' '}
+                    <span className="text-xs font-normal text-slate-400">/ ${analytics?.monthlySpendLimitUsd || 250}</span>
                   </div>
-                  <div className="w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                  <div className="w-full bg-white/[0.08] rounded-full h-1 mt-2.5 overflow-hidden">
                     <div
-                      className="bg-cyan-500 h-full rounded-full transition-all duration-500"
+                      className="bg-indigo-500 h-full rounded-full transition-all duration-300"
                       style={{
                         width: `${Math.min(
                           100,
@@ -351,82 +398,111 @@ export function App() {
               </div>
             </div>
 
-            {/* Charts Section */}
+            {/* Middle Section: Latency Telemetry Chart & Gateway Specs */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 p-5 rounded-2xl bg-slate-900/60 border border-slate-800">
+              <div className="lg:col-span-2 p-5 rounded-xl border border-white/[0.08] bg-[#11131c]/60">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-sm font-semibold text-white">Gateway Latency Telemetry (ms)</h3>
-                    <p className="text-xs text-slate-400">Comparing real-time request latencies and cache hits</p>
+                    <h3 className="text-sm font-medium text-white">Gateway Response Latency</h3>
+                    <p className="text-xs text-slate-400">Time-to-first-token & cache response benchmarks</p>
                   </div>
-                  <span className="text-xs text-cyan-400 font-mono bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/40">
-                    p95: {analytics?.p95LatencyMs || 0}ms
-                  </span>
+                  <div className="flex items-center space-x-2 text-xs">
+                    <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-mono">
+                      p95: {analytics?.p95LatencyMs || 0}ms
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-white/[0.05] text-slate-300 border border-white/[0.08] font-mono">
+                      avg: {analytics?.avgLatencyMs || 0}ms
+                    </span>
+                  </div>
                 </div>
                 <div className="h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={analytics?.timeline && analytics.timeline.length > 0 ? analytics.timeline : [{ time: '00:00', latency: 15, tokens: 0, isHit: 0, pii: 0 }]}>
+                    <AreaChart
+                      data={
+                        analytics?.timeline && analytics.timeline.length > 0
+                          ? analytics.timeline
+                          : [{ time: '00:00', latency: 15, tokens: 0, isHit: 0, pii: 0 }]
+                      }
+                    >
                       <defs>
-                        <linearGradient id="latencyGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                        <linearGradient id="latencySaaS" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
+                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                      <XAxis dataKey="time" stroke="#64748b" fontSize={11} />
-                      <YAxis stroke="#64748b" fontSize={11} unit="ms" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis dataKey="time" stroke="#475569" fontSize={11} tickLine={false} />
+                      <YAxis stroke="#475569" fontSize={11} unit="ms" tickLine={false} axisLine={false} />
                       <Tooltip
-                        contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '0.5rem' }}
+                        contentStyle={{
+                          backgroundColor: '#0f111a',
+                          borderColor: 'rgba(255,255,255,0.1)',
+                          borderRadius: '0.5rem',
+                          fontSize: '12px',
+                        }}
                       />
                       <Area
                         type="monotone"
                         dataKey="latency"
-                        stroke="#06b6d4"
+                        stroke="#6366f1"
                         strokeWidth={2}
                         fillOpacity={1}
-                        fill="url(#latencyGrad)"
+                        fill="url(#latencySaaS)"
                       />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col justify-between">
+              {/* Linear / Attio Calm Design Feature Card */}
+              <div className="p-5 rounded-xl border border-white/[0.08] bg-[#11131c]/60 flex flex-col justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold text-white mb-1">Architecture Highlights</h3>
-                  <p className="text-xs text-slate-400 mb-4">NullLeak Enterprise Core</p>
+                  <div className="flex items-center space-x-2 text-xs font-medium text-slate-400 mb-1">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Guardrail Pipeline</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-white mb-4">Enterprise Safety Architecture</h3>
 
                   <div className="space-y-3">
-                    <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-800/40 border border-slate-800">
-                      <ShieldCheck className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
-                      <div className="text-xs">
-                        <span className="font-semibold text-slate-200">Zero-Data-Leak Guardrail</span>
-                        <p className="text-slate-400 mt-0.5">Scans Luhn Credit Cards, emails, and Bearer API tokens before sending prompt upstream.</p>
+                    <div className="p-3 rounded-lg border border-white/[0.06] bg-white/[0.02]">
+                      <div className="flex items-center space-x-2 text-xs font-medium text-slate-200">
+                        <CreditCard className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Luhn Credit Card Scrubbing</span>
                       </div>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Mathematical checksum validation stops false positives while scrubbing real card numbers.
+                      </p>
                     </div>
-                    <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-800/40 border border-slate-800">
-                      <Zap className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                      <div className="text-xs">
-                        <span className="font-semibold text-slate-200">Semantic Vector Cache</span>
-                        <p className="text-slate-400 mt-0.5">Cosine similarity matching cuts upstream token expenses by up to 50%.</p>
+
+                    <div className="p-3 rounded-lg border border-white/[0.06] bg-white/[0.02]">
+                      <div className="flex items-center space-x-2 text-xs font-medium text-slate-200">
+                        <Fingerprint className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Vector Cosine Deduplication</span>
                       </div>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        High-speed semantic matching returns identical prompt completions in &lt;25ms.
+                      </p>
                     </div>
-                    <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-800/40 border border-slate-800">
-                      <Database className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
-                      <div className="text-xs">
-                        <span className="font-semibold text-slate-200">Async Telemetry Queue</span>
-                        <p className="text-slate-400 mt-0.5">BullMQ worker ingests audits and token usage without blocking the user HTTP stream.</p>
+
+                    <div className="p-3 rounded-lg border border-white/[0.06] bg-white/[0.02]">
+                      <div className="flex items-center space-x-2 text-xs font-medium text-slate-200">
+                        <Server className="w-3.5 h-3.5 text-purple-400" />
+                        <span>OpenAI Drop-In Compatibility</span>
                       </div>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Simply update the base URL to <code className="text-indigo-300">/v1</code> with zero client code refactoring.
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-slate-800 text-center">
+                <div className="mt-4 pt-3 border-t border-white/[0.06]">
                   <button
                     onClick={() => setActiveTab('playground')}
-                    className="w-full py-2 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs transition shadow-md shadow-cyan-600/20"
+                    className="w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition duration-150 flex items-center justify-center space-x-1.5 shadow-sm shadow-indigo-500/20"
                   >
-                    Open Live Guardrail Playground →
+                    <span>Launch Guardrail Sandbox</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -434,125 +510,121 @@ export function App() {
           </div>
         )}
 
-        {/* PLAYGROUND TAB */}
+        {/* PLAYGROUND / SANDBOX TAB */}
         {activeTab === 'playground' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
+            {/* Input Config Form */}
+            <div className="p-5 rounded-xl border border-white/[0.08] bg-[#11131c]/60 space-y-4">
               <div>
-                <h2 className="text-base font-semibold text-white">Live Guardrail & Cache Tester</h2>
-                <p className="text-xs text-slate-400">
-                  Input prompts containing sensitive PII (emails, credit cards, API secrets) to see real-time redaction & semantic caching.
+                <h2 className="text-sm font-semibold text-white">Interactive Guardrail & Cache Sandbox</h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Verify PII masking, Luhn credit card validation, and semantic cache triggers before deploying to production.
                 </p>
               </div>
 
               <div className="space-y-3">
-                <label className="text-xs font-medium text-slate-300">Target Model</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-slate-300">Model Destination</label>
+                  <span className="text-[11px] text-slate-500">Drop-in OpenAI format</span>
+                </div>
                 <select
                   value={sandboxModel}
                   onChange={(e) => setSandboxModel(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-[#0a0c13] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
                 >
                   <option value="gpt-4o">gpt-4o (OpenAI)</option>
                   <option value="gpt-4o-mini">gpt-4o-mini (OpenAI)</option>
-                  <option value="gemini-1.5-flash">gemini-1.5-flash (Google)</option>
+                  <option value="gemini-1.5-flash">gemini-1.5-flash (Google Gemini)</option>
                   <option value="claude-3-5-sonnet">claude-3-5-sonnet (Anthropic)</option>
                 </select>
 
-                <label className="text-xs font-medium text-slate-300">Input Prompt (Contains Sensitive PII)</label>
+                <div className="flex items-center justify-between pt-1">
+                  <label className="text-xs font-medium text-slate-300">Prompt with Sensitive Content</label>
+                  <div className="flex space-x-2 text-[11px]">
+                    <button
+                      onClick={() =>
+                        setSandboxPrompt(
+                          'Charge my card 4111 1111 1111 1111 for enterprise and email invoice to billing@acmecorp.com.'
+                        )
+                      }
+                      className="text-indigo-400 hover:text-indigo-300 transition"
+                    >
+                      Credit Card + Email
+                    </button>
+                    <span className="text-slate-600">•</span>
+                    <button
+                      onClick={() =>
+                        setSandboxPrompt(
+                          'My AWS root key is AKIA1234567890ABCDEF and secret token is sk-99887766554433221100.'
+                        )
+                      }
+                      className="text-indigo-400 hover:text-indigo-300 transition"
+                    >
+                      API Key Leak
+                    </button>
+                  </div>
+                </div>
+
                 <textarea
                   rows={5}
                   value={sandboxPrompt}
                   onChange={(e) => setSandboxPrompt(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono resize-none"
+                  className="w-full bg-[#0a0c13] border border-white/[0.08] rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono resize-none transition"
                 />
-
-                <div className="flex flex-wrap gap-2 text-[11px]">
-                  <span className="text-slate-400">Quick Test Templates:</span>
-                  <button
-                    onClick={() =>
-                      setSandboxPrompt(
-                        'Hi team, please charge my card 4111 1111 1111 1111 for the enterprise tier and notify me at billing@acmecorp.com.'
-                      )
-                    }
-                    className="text-cyan-400 hover:underline"
-                  >
-                    Credit Card + Email
-                  </button>
-                  <span>•</span>
-                  <button
-                    onClick={() =>
-                      setSandboxPrompt(
-                        'My AWS root key is AKIA1234567890ABCDEF and bearer token is sk-99887766554433221100. How do I rotate them?'
-                      )
-                    }
-                    className="text-cyan-400 hover:underline"
-                  >
-                    API Secret Leak
-                  </button>
-                  <span>•</span>
-                  <button
-                    onClick={() =>
-                      setSandboxPrompt('How do I reset my account password?')
-                    }
-                    className="text-cyan-400 hover:underline"
-                  >
-                    Cache Hit Test
-                  </button>
-                </div>
               </div>
 
               <button
                 onClick={handleTestSandbox}
                 disabled={isSandboxRunning}
-                className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-medium flex items-center justify-center space-x-2 transition shadow-md shadow-cyan-600/20"
+                className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium flex items-center justify-center space-x-2 transition duration-150 shadow-sm shadow-indigo-600/20"
               >
                 {isSandboxRunning ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Executing Pipeline...</span>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Processing through pipeline...</span>
                   </>
                 ) : (
                   <>
-                    <Terminal className="w-4 h-4" />
-                    <span>Run Through NullLeak Gateway</span>
+                    <Terminal className="w-3.5 h-3.5" />
+                    <span>Execute via NullLeak Proxy</span>
                   </>
                 )}
               </button>
             </div>
 
-            {/* Playground Results */}
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col justify-between">
+            {/* Output Inspection Panel */}
+            <div className="p-5 rounded-xl border border-white/[0.08] bg-[#11131c]/60 flex flex-col justify-between">
               <div>
-                <h3 className="text-base font-semibold text-white mb-1">Gateway Execution Output</h3>
-                <p className="text-xs text-slate-400 mb-4">Inspection of redaction headers, cache status, and LLM output</p>
+                <h3 className="text-sm font-semibold text-white mb-0.5">Execution & Guardrail Trace</h3>
+                <p className="text-xs text-slate-400 mb-4">Live inspection of headers, redacted tokens, and sanitized payload</p>
 
                 {sandboxResult ? (
                   <div className="space-y-4">
-                    {/* Header Chips */}
+                    {/* Status Badges */}
                     <div className="flex flex-wrap items-center gap-2">
                       <span
-                        className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${
+                        className={`text-[11px] px-2.5 py-1 rounded-md font-medium border ${
                           sandboxResult.cacheStatus === 'HIT'
-                            ? 'bg-emerald-950/80 text-emerald-400 border-emerald-800'
-                            : 'bg-amber-950/80 text-amber-400 border-amber-800'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                         }`}
                       >
                         Cache: {sandboxResult.cacheStatus}
                       </span>
-                      <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-cyan-950/80 text-cyan-400 border border-cyan-800">
-                        Redacted: {sandboxResult.guardrail.redactedCount} items
+                      <span className="text-[11px] px-2.5 py-1 rounded-md font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                        {sandboxResult.guardrail.redactedCount} Secrets Masked
                       </span>
-                      <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-purple-950/80 text-purple-400 border border-purple-800">
+                      <span className="text-[11px] px-2.5 py-1 rounded-md font-medium bg-white/[0.04] text-slate-300 border border-white/[0.08]">
                         Latency: {sandboxResult.latency}
                       </span>
                     </div>
 
-                    {/* Scrubbed Prompt */}
+                    {/* Masked Output */}
                     <div>
-                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                        Sanitized Prompt (Sent Upstream)
+                      <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                        Sanitized Prompt (What Leaves Network)
                       </span>
-                      <div className="mt-1 p-3 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-emerald-300 break-words">
+                      <div className="mt-1 p-3 rounded-lg bg-[#0a0c13] border border-white/[0.08] font-mono text-xs text-emerald-300 break-words">
                         {sandboxResult.guardrail.sanitizedPrompt}
                       </div>
                     </div>
@@ -560,18 +632,18 @@ export function App() {
                     {/* Detected Findings */}
                     {sandboxResult.guardrail.findings.length > 0 && (
                       <div>
-                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                          Scrubbed Entities
+                        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                          Redaction Audit Detail
                         </span>
                         <div className="mt-1 space-y-1">
                           {sandboxResult.guardrail.findings.map((f: any, i: number) => (
                             <div
                               key={i}
-                              className="text-xs p-2 rounded-lg bg-rose-950/40 border border-rose-900/60 flex items-center justify-between text-rose-300"
+                              className="text-xs p-2 rounded-md bg-rose-500/10 border border-rose-500/20 flex items-center justify-between text-rose-300"
                             >
-                              <span className="font-semibold">[{f.type}]</span>
-                              <span className="font-mono text-slate-400">{f.original}</span>
-                              <span className="text-slate-200">→ {f.replacement}</span>
+                              <span className="font-semibold text-[11px]">[{f.type}]</span>
+                              <span className="font-mono text-slate-400 text-[11px]">{f.original}</span>
+                              <span className="text-slate-200 text-[11px]">→ {f.replacement}</span>
                             </div>
                           ))}
                         </div>
@@ -580,18 +652,18 @@ export function App() {
 
                     {/* Completion Snippet */}
                     <div>
-                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                        LLM Completion Response
+                      <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                        Upstream / Cached Response
                       </span>
-                      <div className="mt-1 p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200">
+                      <div className="mt-1 p-3 rounded-lg bg-[#0a0c13] border border-white/[0.08] text-xs text-slate-200 leading-relaxed">
                         {sandboxResult.completion}
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="h-64 flex flex-col items-center justify-center text-center p-6 border border-dashed border-slate-800 rounded-xl">
+                  <div className="h-64 flex flex-col items-center justify-center text-center p-6 border border-dashed border-white/[0.08] rounded-lg">
                     <ShieldCheck className="w-8 h-8 text-slate-600 mb-2" />
-                    <p className="text-xs text-slate-400">Click &quot;Run Through NullLeak Gateway&quot; to test prompt sanitization and caching.</p>
+                    <p className="text-xs text-slate-400">Click &quot;Execute via NullLeak Proxy&quot; to test guardrails.</p>
                   </div>
                 )}
               </div>
@@ -599,50 +671,51 @@ export function App() {
           </div>
         )}
 
-        {/* API KEYS TAB */}
+        {/* API KEYS TAB (Attio Asset Management Pattern) */}
         {activeTab === 'keys' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-base font-semibold text-white">API Keys & Multi-Tenant Access</h2>
-                <p className="text-xs text-slate-400">
-                  Manage gateway client secrets, rate limiting (RPM), and allowed model access.
-                </p>
+                <h2 className="text-sm font-semibold text-white">Client API Key Assets</h2>
+                <p className="text-xs text-slate-400">Manage client secrets, allowed models, and per-key rate limits.</p>
               </div>
               <button
                 onClick={() => {
                   setCreatedKeySecret(null);
                   setShowKeyModal(true);
                 }}
-                className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium transition shadow-md shadow-cyan-600/20"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition duration-150 shadow-sm shadow-indigo-600/20"
               >
-                <Plus className="w-4 h-4" />
-                <span>Generate Key</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Create Key</span>
               </button>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60">
+            <div className="rounded-xl border border-white/[0.08] bg-[#11131c]/60 overflow-hidden">
               <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-900 text-slate-400 font-medium border-b border-slate-800">
+                <thead className="bg-white/[0.02] text-slate-400 font-medium border-b border-white/[0.06]">
                   <tr>
                     <th className="p-3.5">Name</th>
                     <th className="p-3.5">Key Prefix</th>
-                    <th className="p-3.5">RPM Limit</th>
-                    <th className="p-3.5">Allowed Models</th>
+                    <th className="p-3.5">Rate Limit</th>
+                    <th className="p-3.5">Model Permissions</th>
                     <th className="p-3.5">Status</th>
                     <th className="p-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody className="divide-y divide-white/[0.04]">
                   {apiKeys.map((key) => (
-                    <tr key={key._id} className="hover:bg-slate-800/40">
+                    <tr key={key._id} className="hover:bg-white/[0.02] transition">
                       <td className="p-3.5 font-medium text-white">{key.name}</td>
-                      <td className="p-3.5 font-mono text-cyan-400">{key.keyPrefix}</td>
-                      <td className="p-3.5">{key.rateLimitRpm} req/min</td>
+                      <td className="p-3.5 font-mono text-indigo-400">{key.keyPrefix}</td>
+                      <td className="p-3.5">{key.rateLimitRpm} RPM</td>
                       <td className="p-3.5">
                         <div className="flex flex-wrap gap-1">
                           {key.allowedModels.map((m) => (
-                            <span key={m} className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300">
+                            <span
+                              key={m}
+                              className="px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/[0.06] text-[10px] text-slate-300"
+                            >
                               {m}
                             </span>
                           ))}
@@ -650,8 +723,10 @@ export function App() {
                       </td>
                       <td className="p-3.5">
                         <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                            key.isEnabled ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'
+                          className={`px-2 py-0.5 rounded text-[10px] font-medium border ${
+                            key.isEnabled
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                              : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                           }`}
                         >
                           {key.isEnabled ? 'Active' : 'Disabled'}
@@ -660,10 +735,10 @@ export function App() {
                       <td className="p-3.5 text-right">
                         <button
                           onClick={() => handleDeleteApiKey(key._id)}
-                          className="p-1 rounded hover:bg-rose-950/60 text-rose-400 transition"
+                          className="p-1 rounded hover:bg-rose-500/10 text-rose-400 transition"
                           title="Revoke key"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </td>
                     </tr>
@@ -672,18 +747,18 @@ export function App() {
               </table>
             </div>
 
-            {/* Key Creation Modal */}
+            {/* Creation Modal */}
             {showKeyModal && (
-              <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full space-y-4">
-                  <h3 className="text-base font-semibold text-white">Create New Gateway API Key</h3>
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                <div className="bg-[#11131c] border border-white/[0.1] rounded-xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+                  <h3 className="text-sm font-semibold text-white">Generate Client Gateway Key</h3>
 
                   {createdKeySecret ? (
                     <div className="space-y-4">
-                      <div className="p-3 rounded-xl bg-amber-950/50 border border-amber-800 text-amber-300 text-xs">
-                        ⚠️ Please copy your key now. You will not be able to see it again!
+                      <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+                        ⚠️ Please copy this secret now. It will not be revealed again.
                       </div>
-                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-cyan-400 break-all flex items-center justify-between">
+                      <div className="p-3 rounded-lg bg-[#0a0c13] border border-white/[0.08] font-mono text-xs text-indigo-400 break-all flex items-center justify-between">
                         <span>{createdKeySecret}</span>
                         <button
                           onClick={() => {
@@ -693,12 +768,16 @@ export function App() {
                           }}
                           className="p-1 text-slate-400 hover:text-white"
                         >
-                          {copiedKey ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                          {copiedKey ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
                         </button>
                       </div>
                       <button
                         onClick={() => setShowKeyModal(false)}
-                        className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-medium"
+                        className="w-full py-2 bg-white/[0.08] hover:bg-white/[0.12] text-white rounded-lg text-xs font-medium"
                       >
                         Done
                       </button>
@@ -706,14 +785,14 @@ export function App() {
                   ) : (
                     <form onSubmit={handleCreateApiKey} className="space-y-3">
                       <div>
-                        <label className="text-xs text-slate-300 font-medium">Key Name</label>
+                        <label className="text-xs text-slate-300 font-medium">Key Identifier</label>
                         <input
                           type="text"
                           required
-                          placeholder="e.g. Production Mobile App"
+                          placeholder="e.g. Customer Support AI Assistant"
                           value={newKeyName}
                           onChange={(e) => setNewKeyName(e.target.value)}
-                          className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                          className="w-full mt-1 bg-[#0a0c13] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
                         />
                       </div>
                       <div>
@@ -722,22 +801,22 @@ export function App() {
                           type="number"
                           value={newKeyRpm}
                           onChange={(e) => setNewKeyRpm(e.target.value)}
-                          className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                          className="w-full mt-1 bg-[#0a0c13] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
                         />
                       </div>
                       <div className="flex justify-end space-x-2 pt-2">
                         <button
                           type="button"
                           onClick={() => setShowKeyModal(false)}
-                          className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-medium"
+                          className="px-3 py-1.5 rounded-lg bg-white/[0.04] text-slate-300 text-xs font-medium"
                         >
                           Cancel
                         </button>
                         <button
                           type="submit"
-                          className="px-4 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium"
+                          className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium"
                         >
-                          Generate
+                          Generate Secret
                         </button>
                       </div>
                     </form>
@@ -748,23 +827,51 @@ export function App() {
           </div>
         )}
 
-        {/* AUDIT LOGS TAB */}
+        {/* AUDIT LOGS TAB (Attio Table + Detail Drawer Pattern) */}
         {activeTab === 'logs' && (
           <div className="space-y-4">
-            <div>
-              <h2 className="text-base font-semibold text-white">Live Request Audit Trail</h2>
-              <p className="text-xs text-slate-400">
-                Detailed telemetry stream persisted asynchronously via BullMQ worker.
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-white">Live Request Audits & Telemetry</h2>
+                <p className="text-xs text-slate-400">Click any row to inspect full payload & redaction findings.</p>
+              </div>
+
+              {/* Filter controls */}
+              <div className="flex items-center space-x-1 p-1 bg-white/[0.03] rounded-lg border border-white/[0.06] text-xs">
+                <button
+                  onClick={() => setLogFilter('all')}
+                  className={`px-2.5 py-1 rounded-md transition ${
+                    logFilter === 'all' ? 'bg-white/[0.08] text-white' : 'text-slate-400'
+                  }`}
+                >
+                  All ({logs.length})
+                </button>
+                <button
+                  onClick={() => setLogFilter('hit')}
+                  className={`px-2.5 py-1 rounded-md transition ${
+                    logFilter === 'hit' ? 'bg-white/[0.08] text-white' : 'text-slate-400'
+                  }`}
+                >
+                  Cache Hits
+                </button>
+                <button
+                  onClick={() => setLogFilter('pii')}
+                  className={`px-2.5 py-1 rounded-md transition ${
+                    logFilter === 'pii' ? 'bg-white/[0.08] text-white' : 'text-slate-400'
+                  }`}
+                >
+                  PII Scrubbed
+                </button>
+              </div>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60">
+            <div className="rounded-xl border border-white/[0.08] bg-[#11131c]/60 overflow-hidden">
               <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-900 text-slate-400 font-medium border-b border-slate-800">
+                <thead className="bg-white/[0.02] text-slate-400 font-medium border-b border-white/[0.06]">
                   <tr>
-                    <th className="p-3.5">Time</th>
+                    <th className="p-3.5">Timestamp</th>
                     <th className="p-3.5">Model</th>
-                    <th className="p-3.5">Cache</th>
+                    <th className="p-3.5">Status</th>
                     <th className="p-3.5">PII Filtered</th>
                     <th className="p-3.5">Tokens</th>
                     <th className="p-3.5">Latency</th>
@@ -772,45 +879,47 @@ export function App() {
                     <th className="p-3.5">Prompt Preview</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
-                  {logs.length === 0 ? (
+                <tbody className="divide-y divide-white/[0.04]">
+                  {filteredLogs.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-6 text-center text-slate-500">
-                        No requests recorded yet. Try testing prompts in the Playground tab.
+                      <td colSpan={8} className="p-8 text-center text-slate-500">
+                        No requests matching filter. Run queries in the Sandbox tab.
                       </td>
                     </tr>
                   ) : (
-                    logs.map((log) => (
-                      <tr key={log._id} className="hover:bg-slate-800/40">
+                    filteredLogs.map((log) => (
+                      <tr
+                        key={log._id}
+                        onClick={() => setSelectedLog(log)}
+                        className="hover:bg-white/[0.02] cursor-pointer transition"
+                      >
                         <td className="p-3.5 font-mono text-[11px] text-slate-400">
                           {new Date(log.timestamp).toLocaleTimeString()}
                         </td>
                         <td className="p-3.5 font-medium text-slate-200">{log.modelRequested}</td>
                         <td className="p-3.5">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                            className={`px-2 py-0.5 rounded text-[10px] font-medium border ${
                               log.wasCacheHit
-                                ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                                : 'bg-slate-800 text-slate-400'
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                : 'bg-white/[0.04] text-slate-400 border-white/[0.06]'
                             }`}
                           >
-                            {log.wasCacheHit ? 'HIT' : 'MISS'}
+                            {log.wasCacheHit ? 'CACHE HIT' : 'MISS'}
                           </span>
                         </td>
                         <td className="p-3.5">
                           {log.piiRedactedCount > 0 ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-950 text-rose-400 border border-rose-800">
-                              {log.piiRedactedCount} blocked
+                            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                              {log.piiRedactedCount} masked
                             </span>
                           ) : (
                             <span className="text-slate-500">0</span>
                           )}
                         </td>
                         <td className="p-3.5 font-mono text-slate-300">{log.totalTokens}</td>
-                        <td className="p-3.5 font-mono text-cyan-400">{log.latencyMs}ms</td>
-                        <td className="p-3.5 font-mono text-slate-300">
-                          ${log.estimatedCostUsd.toFixed(4)}
-                        </td>
+                        <td className="p-3.5 font-mono text-indigo-400">{log.latencyMs}ms</td>
+                        <td className="p-3.5 font-mono text-slate-300">${log.estimatedCostUsd.toFixed(4)}</td>
                         <td className="p-3.5 font-mono text-[11px] text-slate-400 max-w-xs truncate">
                           {log.sanitizedPrompt || log.rawPrompt || 'N/A'}
                         </td>
@@ -820,9 +929,155 @@ export function App() {
                 </tbody>
               </table>
             </div>
+
+            {/* Slide-over Inspection Drawer for Selected Log */}
+            {selectedLog && (
+              <div className="fixed inset-y-0 right-0 w-full max-w-md bg-[#11131c] border-l border-white/[0.1] shadow-2xl p-6 z-50 flex flex-col justify-between overflow-y-auto">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+                    <h3 className="text-sm font-semibold text-white">Audit Record Detail</h3>
+                    <button
+                      onClick={() => setSelectedLog(null)}
+                      className="p-1 rounded text-slate-400 hover:text-white"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between py-1 border-b border-white/[0.04]">
+                      <span className="text-slate-400">Request ID:</span>
+                      <span className="font-mono text-slate-200">{selectedLog._id}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-white/[0.04]">
+                      <span className="text-slate-400">Model:</span>
+                      <span className="text-slate-200">{selectedLog.modelRequested}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-white/[0.04]">
+                      <span className="text-slate-400">Cache Result:</span>
+                      <span className={selectedLog.wasCacheHit ? 'text-emerald-400' : 'text-slate-400'}>
+                        {selectedLog.wasCacheHit ? 'HIT ($0.00)' : 'MISS (Forwarded Upstream)'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-white/[0.04]">
+                      <span className="text-slate-400">Latency:</span>
+                      <span className="font-mono text-indigo-400">{selectedLog.latencyMs}ms</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-white/[0.04]">
+                      <span className="text-slate-400">PII Detected:</span>
+                      <span className="text-rose-400">{selectedLog.piiRedactedCount} items</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                      Sanitized Prompt
+                    </span>
+                    <div className="mt-1 p-3 rounded-lg bg-[#0a0c13] border border-white/[0.08] font-mono text-xs text-emerald-300 break-words">
+                      {selectedLog.sanitizedPrompt || selectedLog.rawPrompt || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-white/[0.06]">
+                  <button
+                    onClick={() => setSelectedLog(null)}
+                    className="w-full py-2 bg-white/[0.06] hover:bg-white/[0.1] text-white rounded-lg text-xs font-medium"
+                  >
+                    Close Inspector
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
+
+      {/* 2. Linear-Style Cmd+K Command Palette Modal */}
+      {showCommandPalette && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-24 p-4 z-50"
+          onClick={() => setShowCommandPalette(false)}
+        >
+          <div
+            className="bg-[#11131c] border border-white/[0.1] rounded-xl max-w-lg w-full overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center px-4 py-3 border-b border-white/[0.06]">
+              <Search className="w-4 h-4 text-slate-400 mr-3" />
+              <input
+                autoFocus
+                type="text"
+                placeholder="Type a command or search..."
+                value={cmdSearch}
+                onChange={(e) => setCmdSearch(e.target.value)}
+                className="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none"
+              />
+              <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-400 border border-white/[0.08]">
+                ESC
+              </kbd>
+            </div>
+            <div className="p-2 space-y-1 text-xs">
+              <button
+                onClick={() => {
+                  setActiveTab('overview');
+                  setShowCommandPalette(false);
+                }}
+                className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-white/[0.04] text-slate-300 hover:text-white transition"
+              >
+                <div className="flex items-center space-x-2">
+                  <Activity className="w-4 h-4 text-indigo-400" />
+                  <span>Go to Overview Dashboard</span>
+                </div>
+                <span className="text-[10px] text-slate-500">Navigation</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab('playground');
+                  setShowCommandPalette(false);
+                }}
+                className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-white/[0.04] text-slate-300 hover:text-white transition"
+              >
+                <div className="flex items-center space-x-2">
+                  <Terminal className="w-4 h-4 text-emerald-400" />
+                  <span>Open Guardrail Sandbox</span>
+                </div>
+                <span className="text-[10px] text-slate-500">Testing</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab('keys');
+                  setShowCommandPalette(false);
+                  setShowKeyModal(true);
+                }}
+                className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-white/[0.04] text-slate-300 hover:text-white transition"
+              >
+                <div className="flex items-center space-x-2">
+                  <Key className="w-4 h-4 text-amber-400" />
+                  <span>Generate New API Key</span>
+                </div>
+                <span className="text-[10px] text-slate-500">Action</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab('logs');
+                  setShowCommandPalette(false);
+                }}
+                className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-white/[0.04] text-slate-300 hover:text-white transition"
+              >
+                <div className="flex items-center space-x-2">
+                  <Layers className="w-4 h-4 text-purple-400" />
+                  <span>Inspect Audit Records</span>
+                </div>
+                <span className="text-[10px] text-slate-500">Audits</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
