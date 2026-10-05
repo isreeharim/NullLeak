@@ -12,13 +12,8 @@ import {
   Lock,
   RefreshCw,
   Search,
-  Sparkles,
   Layers,
-  ChevronRight,
-  ArrowUpRight,
-  Server,
-  CreditCard,
-  Fingerprint
+  ArrowUpRight
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -393,113 +388,58 @@ export function App() {
               </div>
             </div>
 
-            {/* Middle Section: Latency Telemetry Chart & Gateway Specs */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 p-5 rounded-xl border border-white/[0.08] bg-[#11131c]/60">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-white">Gateway Response Latency</h3>
-                    <p className="text-xs text-slate-400">Time-to-first-token & cache response benchmarks</p>
-                  </div>
-                  <div className="flex items-center space-x-2 text-xs">
-                    <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-mono">
-                      p95: {analytics?.p95LatencyMs || 0}ms
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-white/[0.05] text-slate-300 border border-white/[0.08] font-mono">
-                      avg: {analytics?.avgLatencyMs || 0}ms
-                    </span>
-                  </div>
+            {/* Middle Section: Latency Telemetry Chart (Full Width) */}
+            <div className="p-5 rounded-xl border border-white/[0.08] bg-[#11131c]/60">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-medium text-white">Gateway Response Latency</h3>
+                  <p className="text-xs text-slate-400">Time-to-first-token & cache response benchmarks</p>
                 </div>
-                <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={
-                        analytics?.timeline && analytics.timeline.length > 0
-                          ? analytics.timeline
-                          : [{ time: '00:00', latency: 15, tokens: 0, isHit: 0, pii: 0 }]
-                      }
-                    >
-                      <defs>
-                        <linearGradient id="latencySaaS" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
-                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                      <XAxis dataKey="time" stroke="#475569" fontSize={11} tickLine={false} />
-                      <YAxis stroke="#475569" fontSize={11} unit="ms" tickLine={false} axisLine={false} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#0f111a',
-                          borderColor: 'rgba(255,255,255,0.1)',
-                          borderRadius: '0.5rem',
-                          fontSize: '12px',
-                        }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="latency"
-                        stroke="#6366f1"
-                        strokeWidth={2}
-                        fillOpacity={1}
-                        fill="url(#latencySaaS)"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                <div className="flex items-center space-x-2 text-xs">
+                  <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-mono">
+                    p95: {analytics?.p95LatencyMs || 0}ms
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-white/[0.05] text-slate-300 border border-white/[0.08] font-mono">
+                    avg: {analytics?.avgLatencyMs || 0}ms
+                  </span>
                 </div>
               </div>
-
-              {/* Linear / Attio Calm Design Feature Card */}
-              <div className="p-5 rounded-xl border border-white/[0.08] bg-[#11131c]/60 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center space-x-2 text-xs font-medium text-slate-400 mb-1">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Guardrail Pipeline</span>
-                  </div>
-                  <h3 className="text-sm font-semibold text-white mb-4">Enterprise Safety Architecture</h3>
-
-                  <div className="space-y-3">
-                    <div className="p-3 rounded-lg border border-white/[0.06] bg-white/[0.02]">
-                      <div className="flex items-center space-x-2 text-xs font-medium text-slate-200">
-                        <CreditCard className="w-3.5 h-3.5 text-indigo-400" />
-                        <span>Luhn Credit Card Scrubbing</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1">
-                        Mathematical checksum validation stops false positives while scrubbing real card numbers.
-                      </p>
-                    </div>
-
-                    <div className="p-3 rounded-lg border border-white/[0.06] bg-white/[0.02]">
-                      <div className="flex items-center space-x-2 text-xs font-medium text-slate-200">
-                        <Fingerprint className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Vector Cosine Deduplication</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1">
-                        High-speed semantic matching returns identical prompt completions in &lt;25ms.
-                      </p>
-                    </div>
-
-                    <div className="p-3 rounded-lg border border-white/[0.06] bg-white/[0.02]">
-                      <div className="flex items-center space-x-2 text-xs font-medium text-slate-200">
-                        <Server className="w-3.5 h-3.5 text-purple-400" />
-                        <span>OpenAI Drop-In Compatibility</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1">
-                        Simply update the base URL to <code className="text-indigo-300">/v1</code> with zero client code refactoring.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-white/[0.06]">
-                  <button
-                    onClick={() => setActiveTab('playground')}
-                    className="w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition duration-150 flex items-center justify-center space-x-1.5 shadow-sm shadow-indigo-500/20"
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={
+                      analytics?.timeline && analytics.timeline.length > 0
+                        ? analytics.timeline
+                        : [{ time: '00:00', latency: 15, tokens: 0, isHit: 0, pii: 0 }]
+                    }
                   >
-                    <span>Launch Guardrail Sandbox</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                    <defs>
+                      <linearGradient id="latencySaaS" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="time" stroke="#475569" fontSize={11} tickLine={false} />
+                    <YAxis stroke="#475569" fontSize={11} unit="ms" tickLine={false} axisLine={false} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#0f111a',
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        borderRadius: '0.5rem',
+                        fontSize: '12px',
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="latency"
+                      stroke="#6366f1"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#latencySaaS)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
