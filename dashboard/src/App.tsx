@@ -229,11 +229,6 @@ export function App() {
             </div>
             <div className="flex items-center space-x-2">
               <span className="font-semibold text-sm tracking-tight text-white">NullLeak</span>
-              <span className="text-slate-600">/</span>
-              <div className="flex items-center space-x-1 px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.06] text-xs text-slate-300">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                <span className="font-medium">Production Gateway</span>
-              </div>
             </div>
           </div>
 
