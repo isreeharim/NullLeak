@@ -34,6 +34,7 @@ interface AnalyticsSummary {
   cacheHitRate: number;
   totalCostUsd: number;
   savedCostUsd: number;
+  totalTokensSpent?: number;
   piiBlockedCount: number;
   p95LatencyMs: number;
   avgLatencyMs: number;
@@ -338,12 +339,48 @@ export function App() {
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            {/* Top SaaS Metric Cards (Attio / Mixpanel style) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Top Metric Cards (5-column layout with Antigravity tokens & spend) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              {/* Antigravity Total Token Spend Card */}
+              <div className="p-4 rounded-xl border border-white/[0.08] bg-[#11131c]/60 hover:border-white/[0.14] transition relative overflow-hidden group">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="font-medium">Total Tokens Consumed</span>
+                  <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <Activity className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-semibold text-white tracking-tight">
+                    {(analytics?.totalTokensSpent || 0).toLocaleString()}
+                  </div>
+                  <div className="flex items-center space-x-1 text-[11px] text-amber-400 mt-1">
+                    <span>Antigravity & Gateway tokens</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Dollar Spend Card */}
+              <div className="p-4 rounded-xl border border-white/[0.08] bg-[#11131c]/60 hover:border-white/[0.14] transition relative overflow-hidden group">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="font-medium">Estimated Token Cost</span>
+                  <div className="p-1.5 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-semibold text-white tracking-tight">
+                    ${(analytics?.totalCostUsd || 0).toFixed(4)}
+                  </div>
+                  <div className="flex items-center space-x-1 text-[11px] text-slate-400 mt-1">
+                    <span>Model pricing calculation</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Cost Savings Card */}
               <div className="p-4 rounded-xl border border-white/[0.08] bg-[#11131c]/60 hover:border-white/[0.14] transition relative overflow-hidden group">
                 <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span className="font-medium">Total Cost Saved</span>
+                  <span className="font-medium">Cost Saved via Cache</span>
                   <div className="p-1.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                     <Zap className="w-3.5 h-3.5" />
                   </div>
@@ -353,25 +390,7 @@ export function App() {
                     ${analytics?.savedCostUsd.toFixed(2) || '0.00'}
                   </div>
                   <div className="flex items-center space-x-1 text-[11px] text-emerald-400 mt-1">
-                    <span>100% token cost bypass via semantic cache</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Cache Hit Ratio Card */}
-              <div className="p-4 rounded-xl border border-white/[0.08] bg-[#11131c]/60 hover:border-white/[0.14] transition relative overflow-hidden group">
-                <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span className="font-medium">Cache Hit Rate</span>
-                  <div className="p-1.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                    <Activity className="w-3.5 h-3.5" />
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <div className="text-2xl font-semibold text-white tracking-tight">
-                    {((analytics?.cacheHitRate || 0) * 100).toFixed(1)}%
-                  </div>
-                  <div className="flex items-center space-x-1 text-[11px] text-slate-400 mt-1">
-                    <span>{analytics?.cacheHits || 0} hits of {analytics?.totalRequests || 0} total calls</span>
+                    <span>{((analytics?.cacheHitRate || 0) * 100).toFixed(1)}% hit rate bypass</span>
                   </div>
                 </div>
               </div>
@@ -389,7 +408,7 @@ export function App() {
                     {analytics?.piiBlockedCount || 0}
                   </div>
                   <div className="flex items-center space-x-1 text-[11px] text-slate-400 mt-1">
-                    <span>Zero data leaks to upstream LLMs</span>
+                    <span>Zero data leaks detected</span>
                   </div>
                 </div>
               </div>
@@ -397,9 +416,9 @@ export function App() {
               {/* Budget Limit Card */}
               <div className="p-4 rounded-xl border border-white/[0.08] bg-[#11131c]/60 hover:border-white/[0.14] transition relative overflow-hidden group">
                 <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span className="font-medium">Monthly Spend Cap</span>
-                  <div className="p-1.5 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  <span className="font-medium">Monthly Cap</span>
+                  <div className="p-1.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    <ShieldCheck className="w-3.5 h-3.5" />
                   </div>
                 </div>
                 <div className="mt-3">

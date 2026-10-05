@@ -32,6 +32,8 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
+import { antigravityWatcher } from './services/antigravityWatcher.js';
+
 app.listen(config.port, () => {
   console.log(`\n======================================================`);
   console.log(`🛡️  NullLeak AI Guardrail & Optimizer Gateway Running`);
@@ -40,6 +42,9 @@ app.listen(config.port, () => {
   console.log(`📊 Admin / Telemetry API:  http://localhost:${config.port}/api/v1`);
   console.log(`🔑 Default Live Test Key:   ${config.defaultApiKey}`);
   console.log(`⚡ Mode:                    Zero-Config Dual-Mode (Ready)\n`);
+
+  // Start real-time Antigravity activity & token synchronization
+  antigravityWatcher.start();
 });
 
 export default app;

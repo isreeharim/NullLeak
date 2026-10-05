@@ -137,6 +137,7 @@ class StorageService {
     const cacheHitRate = totalRequests > 0 ? Number((cacheHits / totalRequests).toFixed(3)) : 0;
     
     const totalCostUsd = Number(logs.reduce((acc, l) => acc + (l.estimatedCostUsd || 0), 0).toFixed(4));
+    const totalTokensSpent = logs.reduce((acc, l) => acc + (l.totalTokens || 0), 0);
     
     // Calculate cost saved: each cache hit saved whatever the model would have cost
     const savedCostUsd = Number(logs
@@ -167,6 +168,7 @@ class StorageService {
       cacheHitRate,
       totalCostUsd,
       savedCostUsd,
+      totalTokensSpent,
       piiBlockedCount,
       p95LatencyMs,
       avgLatencyMs,
