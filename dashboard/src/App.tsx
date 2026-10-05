@@ -103,6 +103,7 @@ interface RequestLogItem {
   timestamp: string;
   rawPrompt?: string;
   sanitizedPrompt?: string;
+  responseSnippet?: string;
 }
 
 interface IFeedbackItem {
@@ -300,11 +301,14 @@ export function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           {/* Brand & Workspace Switcher */}
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow-inner shadow-white/20 border border-white/10">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-600 to-indigo-700 flex items-center justify-center shadow-inner shadow-white/20 border border-white/10">
               <ShieldCheck className="w-4 h-4 text-white" />
             </div>
             <div className="flex items-center space-x-2">
               <span className="font-semibold text-sm tracking-tight text-white">NullLeak</span>
+              <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                Personal AI Token Tracker
+              </span>
             </div>
           </div>
 
@@ -314,7 +318,7 @@ export function App() {
             className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-slate-400 text-xs transition duration-150"
           >
             <Search className="w-3.5 h-3.5 text-slate-400" />
-            <span>Search or jump to...</span>
+            <span>Search interactions or jump to...</span>
             <kbd className="ml-3 font-mono text-[10px] px-1.5 py-0.5 rounded bg-white/[0.08] text-slate-300 border border-white/10">
               ⌘K
             </kbd>
@@ -343,7 +347,18 @@ export function App() {
                 }`}
               >
                 <Gauge className="w-3.5 h-3.5" />
-                <span>View Usage</span>
+                <span>Token Limits & Quota</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('logs')}
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition ${
+                  activeTab === 'logs'
+                    ? 'bg-white/[0.08] text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Recorded Interactions</span>
               </button>
               <button
                 onClick={() => setActiveTab('playground')}
@@ -366,17 +381,6 @@ export function App() {
               >
                 <Key className="w-3.5 h-3.5" />
                 <span>API Keys</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('logs')}
-                className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition ${
-                  activeTab === 'logs'
-                    ? 'bg-white/[0.08] text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Audits</span>
               </button>
               <button
                 onClick={() => setActiveTab('feedback')}
@@ -481,27 +485,35 @@ export function App() {
                 </div>
               </div>
 
-              {/* Budget Limit Card */}
-              <div className="p-4 rounded-xl border border-white/[0.08] bg-[#11131c]/60 hover:border-white/[0.14] transition relative overflow-hidden group">
+              {/* 5-Hour Active Quota Card */}
+              <div 
+                onClick={() => setActiveTab('usage')}
+                className="p-4 rounded-xl border border-white/[0.08] bg-[#11131c]/60 hover:border-emerald-500/30 transition relative overflow-hidden group cursor-pointer"
+              >
                 <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span className="font-medium">Monthly Cap</span>
-                  <div className="p-1.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                    <ShieldCheck className="w-3.5 h-3.5" />
+                  <span className="font-medium">5-Hour Quota Left</span>
+                  <div className="p-1.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <Clock className="w-3.5 h-3.5" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-2xl font-semibold text-white tracking-tight">
-                    ${analytics?.currentMonthSpendUsd.toFixed(2) || '0.00'}{' '}
-                    <span className="text-xs font-normal text-slate-400">/ ${analytics?.monthlySpendLimitUsd || 250}</span>
+                  <div className="text-2xl font-semibold text-white tracking-tight flex items-baseline space-x-2">
+                    <span>{analytics?.usageLimits?.fiveHourPercentageLeft ?? 100}%</span>
+                    <span className="text-xs font-normal text-emerald-400 font-mono">
+                      {(analytics?.usageLimits?.fiveHourRemainingTokens ?? 53979).toLocaleString()} left
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1">
+                    <span>{formatCountdown(analytics?.usageLimits?.fiveHourResetTime)}</span>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {(analytics?.usageLimits?.fiveHourTokensSpent || 0).toLocaleString()} spent
+                    </span>
                   </div>
                   <div className="w-full bg-white/[0.08] rounded-full h-1 mt-2.5 overflow-hidden">
                     <div
-                      className="bg-indigo-500 h-full rounded-full transition-all duration-300"
+                      className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full rounded-full transition-all duration-300"
                       style={{
-                        width: `${Math.min(
-                          100,
-                          ((analytics?.currentMonthSpendUsd || 0) / (analytics?.monthlySpendLimitUsd || 250)) * 100
-                        )}%`,
+                        width: `${Math.min(100, analytics?.usageLimits?.fiveHourPercentageLeft ?? 100)}%`,
                       }}
                     ></div>
                   </div>
@@ -561,6 +573,62 @@ export function App() {
                     />
                   </AreaChart>
                 </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Recent Recorded Interactions Quick Preview */}
+            <div className="p-5 rounded-xl border border-white/[0.08] bg-[#11131c]/60 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Recent Recorded Interactions</h3>
+                  <p className="text-xs text-slate-400">Latest prompts and agent reasoning synchronized from your Antigravity session</p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('logs')}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center space-x-1 transition"
+                >
+                  <span>View all {logs.length} interactions</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="overflow-x-auto rounded-lg border border-white/[0.06]">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-white/[0.02] text-slate-400 font-medium border-b border-white/[0.06]">
+                    <tr>
+                      <th className="p-3">Time</th>
+                      <th className="p-3">Type / Model</th>
+                      <th className="p-3">Tokens</th>
+                      <th className="p-3">Spend</th>
+                      <th className="p-3">Content Snippet</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.04]">
+                    {logs.slice(0, 5).map((log) => (
+                      <tr
+                        key={log._id}
+                        onClick={() => setSelectedLog(log)}
+                        className="hover:bg-white/[0.02] cursor-pointer transition"
+                      >
+                        <td className="p-3 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                          {new Date(log.timestamp).toLocaleTimeString()}
+                        </td>
+                        <td className="p-3 font-medium text-slate-200 whitespace-nowrap">
+                          {log.modelRequested}
+                        </td>
+                        <td className="p-3 font-mono text-emerald-400 whitespace-nowrap">
+                          {log.totalTokens}
+                        </td>
+                        <td className="p-3 font-mono text-slate-300 whitespace-nowrap">
+                          ${log.estimatedCostUsd.toFixed(4)}
+                        </td>
+                        <td className="p-3 font-mono text-[11px] text-slate-400 max-w-md truncate">
+                          {log.rawPrompt || log.responseSnippet || 'N/A'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -1078,8 +1146,8 @@ export function App() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-white">Live Request Audits & Telemetry</h2>
-                <p className="text-xs text-slate-400">Click any row to inspect full payload & redaction findings.</p>
+                <h2 className="text-sm font-semibold text-white">Recorded Antigravity & AI Interactions</h2>
+                <p className="text-xs text-slate-400">Every prompt, agent reasoning step, and tool action from your Antigravity session is recorded here live.</p>
               </div>
 
               {/* Filter controls */}
@@ -1090,7 +1158,7 @@ export function App() {
                     logFilter === 'all' ? 'bg-white/[0.08] text-white' : 'text-slate-400'
                   }`}
                 >
-                  All ({logs.length})
+                  All Activity ({logs.length})
                 </button>
                 <button
                   onClick={() => setLogFilter('hit')}
@@ -1116,13 +1184,13 @@ export function App() {
                 <thead className="bg-white/[0.02] text-slate-400 font-medium border-b border-white/[0.06]">
                   <tr>
                     <th className="p-3.5">Timestamp</th>
-                    <th className="p-3.5">Model</th>
-                    <th className="p-3.5">Status</th>
-                    <th className="p-3.5">PII Filtered</th>
-                    <th className="p-3.5">Tokens</th>
-                    <th className="p-3.5">Latency</th>
-                    <th className="p-3.5">Cost</th>
-                    <th className="p-3.5">Prompt Preview</th>
+                    <th className="p-3.5">Interaction Type / Model</th>
+                    <th className="p-3.5">Cache</th>
+                    <th className="p-3.5">Safety / PII</th>
+                    <th className="p-3.5">Tokens Consumed</th>
+                    <th className="p-3.5">Duration</th>
+                    <th className="p-3.5">Spend</th>
+                    <th className="p-3.5">Interaction Content Preview</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.04]">

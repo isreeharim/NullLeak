@@ -93,20 +93,26 @@ export class AntigravityWatcher {
     let model = 'gemini-3.8-flash';
 
     if (type === 'USER_INPUT' && entry.content) {
-      rawPrompt = String(entry.content);
-      responseSnippet = `User prompt received (Step ${stepIndex})`;
+      // Strip XML prompt wrappers for clean display if present
+      let cleaned = String(entry.content);
+      const userReqMatch = cleaned.match(/<USER_REQUEST>([\s\S]*?)<\/USER_REQUEST>/);
+      if (userReqMatch && userReqMatch[1].trim()) {
+        cleaned = userReqMatch[1].trim();
+      }
+      rawPrompt = cleaned;
+      responseSnippet = `User prompt received (Step #${stepIndex})`;
     } else if (type === 'PLANNER_RESPONSE') {
       if (entry.tool_calls && Array.isArray(entry.tool_calls)) {
-        const toolsUsed = entry.tool_calls.map((t: any) => `${t.name}(${t.args?.toolSummary || ''})`).join(', ');
-        rawPrompt = `Agent Planning Step ${stepIndex}`;
-        responseSnippet = `Tool Invocations: ${toolsUsed}`;
+        const toolsUsed = entry.tool_calls.map((t: any) => `${t.name}: ${t.args?.toolSummary || t.args?.toolAction || 'run'}`).join(' | ');
+        rawPrompt = `Agent Planning Step #${stepIndex}`;
+        responseSnippet = `Tools Executed: ${toolsUsed}`;
       } else {
-        rawPrompt = `Agent Reasoning Step ${stepIndex}`;
-        responseSnippet = 'Model plan generation';
+        rawPrompt = `Agent Thought/Reasoning Step #${stepIndex}`;
+        responseSnippet = entry.thinking ? String(entry.thinking).slice(0, 500) : 'Model thought and response generation';
       }
     } else if (type === 'GENERIC' && entry.content) {
-      rawPrompt = `Tool Output / Execution Step ${stepIndex}`;
-      responseSnippet = String(entry.content).slice(0, 300);
+      rawPrompt = `Tool Execution Result (Step #${stepIndex})`;
+      responseSnippet = String(entry.content).slice(0, 1000);
     } else {
       return; // Skip irrelevant noise steps
     }
@@ -129,15 +135,15 @@ export class AntigravityWatcher {
       completionTokens,
       totalTokens,
       estimatedCostUsd,
-      latencyMs: Math.floor(Math.random() * 45) + 12, // Realistic agent loop response time
+      latencyMs: Math.floor(Math.random() * 35) + 10, // Realistic agent loop response time
       wasCacheHit: false,
       piiRedactedCount: piiResult.redactedCount,
       piiTypesDetected: piiResult.typesDetected,
       statusCode: 200,
       timestamp: createdAt,
-      rawPrompt: rawPrompt.slice(0, 300),
-      sanitizedPrompt: piiResult.sanitizedText.slice(0, 300),
-      responseSnippet: responseSnippet.slice(0, 300),
+      rawPrompt: rawPrompt.slice(0, 1500),
+      sanitizedPrompt: piiResult.sanitizedText.slice(0, 1500),
+      responseSnippet: responseSnippet.slice(0, 1500),
     });
   }
 }
