@@ -1,0 +1,47 @@
+services:
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongo:27017/nullleak
+      - REDIS_URL=redis://redis:6379
+      - USE_IN_MEMORY_FALLBACK=false
+      - SEMANTIC_CACHE_THRESHOLD=0.75
+    depends_on:
+      - mongo
+      - redis
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - gateway
+
+  mongo:
+    image: mongo:7.0
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis/redis-stack:latest
+    restart: always
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  mongo_data:
+  redis_data:

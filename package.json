@@ -1,0 +1,19 @@
+{
+  "name": "nullleak-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Enterprise AI Guardrail & Cost-Optimizer Gateway",
+  "scripts": {
+    "install:all": "npm install && cd gateway && npm install && cd ../dashboard && npm install",
+    "dev:gateway": "cd gateway && npm run dev",
+    "dev:dashboard": "cd dashboard && npm run dev",
+    "dev": "concurrently -n \"gateway,dashboard\" -c \"cyan,magenta\" \"npm run dev:gateway\" \"npm run dev:dashboard\"",
+    "build:gateway": "cd gateway && npm run build",
+    "build:dashboard": "cd dashboard && npm run build",
+    "build": "npm run build:gateway && npm run build:dashboard",
+    "test": "cd gateway && npm test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
