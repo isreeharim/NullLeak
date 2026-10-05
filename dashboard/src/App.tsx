@@ -56,11 +56,13 @@ interface AnalyticsSummary {
     fiveHourRemainingTokens: number;
     fiveHourPercentageUsed: number;
     fiveHourPercentageLeft?: number;
+    fiveHourResetTime?: string;
     weeklyTokenLimit: number;
     weeklyTokensSpent: number;
     weeklyRemainingTokens: number;
     weeklyPercentageUsed: number;
     weeklyPercentageLeft?: number;
+    weeklyResetTime?: string;
     modelBreakdowns: Array<{
       model: string;
       tokens: number;
@@ -72,6 +74,8 @@ interface AnalyticsSummary {
       weeklyRemainingTokens: number;
       fiveHourPercentageLeft?: number;
       weeklyPercentageLeft?: number;
+      fiveHourResetTime?: string;
+      weeklyResetTime?: string;
     }>;
   };
 }
@@ -169,6 +173,32 @@ export function App() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Live countdown ticker state (updates every second for reset in timers)
+  const [currentTime, setCurrentTime] = useState<number>(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatCountdown = (resetIso?: string) => {
+    if (!resetIso) return 'in 5h 00m';
+    const diffMs = new Date(resetIso).getTime() - currentTime;
+    if (diffMs <= 0) return 'Resetting now...';
+    const totalSecs = Math.floor(diffMs / 1000);
+    const hrs = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+    if (hrs > 24) {
+      const days = Math.floor(hrs / 24);
+      return `in ${days}d ${hrs % 24}h`;
+    }
+    if (hrs > 0) {
+      return `in ${hrs}h ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+    }
+    return `in ${mins}m ${secs.toString().padStart(2, '0')}s`;
   };
 
   useEffect(() => {
@@ -564,16 +594,25 @@ export function App() {
                 </div>
 
                 <div className="pt-2">
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-400">Remaining Quota:</span>
                     <span className="font-mono font-semibold text-emerald-400 text-sm">
-                      {(analytics?.usageLimits?.fiveHourRemainingTokens ?? 70000).toLocaleString()} tokens
+                      {(analytics?.usageLimits?.fiveHourRemainingTokens ?? 55800).toLocaleString()} tokens
                     </span>
                   </div>
-                  <div className="flex justify-between text-xs mt-1">
+                  <div className="flex justify-between items-center text-xs mt-1">
                     <span className="text-slate-400">Consumed / Quota:</span>
                     <span className="font-mono text-slate-300">
-                      {(analytics?.usageLimits?.fiveHourTokensSpent || 0).toLocaleString()} / {(analytics?.usageLimits?.fiveHourTokenLimit || 70000).toLocaleString()}
+                      {(analytics?.usageLimits?.fiveHourTokensSpent || 0).toLocaleString()} / {(analytics?.usageLimits?.fiveHourTokenLimit || 90000).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs mt-2 pt-1.5 border-t border-white/[0.05]">
+                    <span className="text-slate-400 flex items-center space-x-1">
+                      <Clock className="w-3 h-3 text-emerald-400" />
+                      <span>Resets in:</span>
+                    </span>
+                    <span className="font-mono font-medium text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                      {formatCountdown(analytics?.usageLimits?.fiveHourResetTime)}
                     </span>
                   </div>
                   <div className="w-full bg-white/[0.08] rounded-full h-2 mt-3 overflow-hidden">
@@ -610,16 +649,25 @@ export function App() {
                 </div>
 
                 <div className="pt-2">
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-400">Remaining Quota:</span>
                     <span className="font-mono font-semibold text-indigo-300 text-sm">
                       {(analytics?.usageLimits?.weeklyRemainingTokens ?? 1500000).toLocaleString()} tokens
                     </span>
                   </div>
-                  <div className="flex justify-between text-xs mt-1">
+                  <div className="flex justify-between items-center text-xs mt-1">
                     <span className="text-slate-400">Consumed / Quota:</span>
                     <span className="font-mono text-slate-300">
                       {(analytics?.usageLimits?.weeklyTokensSpent || 0).toLocaleString()} / {(analytics?.usageLimits?.weeklyTokenLimit || 1500000).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs mt-2 pt-1.5 border-t border-white/[0.05]">
+                    <span className="text-slate-400 flex items-center space-x-1">
+                      <Clock className="w-3 h-3 text-indigo-400" />
+                      <span>Resets in:</span>
+                    </span>
+                    <span className="font-mono font-medium text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                      {formatCountdown(analytics?.usageLimits?.weeklyResetTime)}
                     </span>
                   </div>
                   <div className="w-full bg-white/[0.08] rounded-full h-2 mt-3 overflow-hidden">

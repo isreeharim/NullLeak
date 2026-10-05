@@ -173,8 +173,8 @@ class StorageService {
     const weeklyTokensSpent = weeklyLogs.reduce((acc, l) => acc + (l.totalTokens || 0), 0);
 
     // Dynamic quota configuration matching Antigravity Gemini tier quotas
-    // 5-Hour rolling window quota calibrated to Antigravity's current tier (approx. 70,000 active token window)
-    const fiveHourTokenLimit = 70000;
+    // Calibrated to align with Antigravity's current 5-hour quota window
+    const fiveHourTokenLimit = 90000;
     const weeklyTokenLimit = 1500000;
 
     const fiveHourRemainingTokens = Math.max(0, fiveHourTokenLimit - fiveHourTokensSpent);
@@ -185,6 +185,16 @@ class StorageService {
 
     const weeklyPercentageUsed = Number(((weeklyTokensSpent / weeklyTokenLimit) * 100).toFixed(1));
     const weeklyPercentageLeft = Math.max(0, Number((100 - weeklyPercentageUsed).toFixed(1)));
+
+    // Calculate window reset countdown timers
+    // Oldest active log in the 5-hour rolling window determines the next token release / window reset
+    const oldest5HourLog = fiveHourLogs.length > 0 ? fiveHourLogs[fiveHourLogs.length - 1] : null;
+    const fiveHourResetTimestamp = oldest5HourLog
+      ? new Date(new Date(oldest5HourLog.timestamp).getTime() + 5 * 60 * 60 * 1000).toISOString()
+      : new Date(now + 5 * 60 * 60 * 1000).toISOString();
+
+    // Weekly reset timestamp (rolling 7 days or next Sunday midnight)
+    const weeklyResetTimestamp = new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString();
 
     // Grouping by model (active Antigravity Gemini, GPT-4o, etc.)
     const modelUsageMap = new Map<string, { model: string; tokens: number; cost: number; requests: number; fiveHourTokens: number; weeklyTokens: number }>();
@@ -209,6 +219,8 @@ class StorageService {
       weeklyRemainingTokens: Math.max(0, weeklyTokenLimit - item.weeklyTokens),
       fiveHourPercentageLeft: Math.max(0, Number((((fiveHourTokenLimit - item.fiveHourTokens) / fiveHourTokenLimit) * 100).toFixed(1))),
       weeklyPercentageLeft: Math.max(0, Number((((weeklyTokenLimit - item.weeklyTokens) / weeklyTokenLimit) * 100).toFixed(1))),
+      fiveHourResetTime: fiveHourResetTimestamp,
+      weeklyResetTime: weeklyResetTimestamp,
     }));
 
     return {
@@ -232,11 +244,13 @@ class StorageService {
         fiveHourRemainingTokens,
         fiveHourPercentageUsed,
         fiveHourPercentageLeft,
+        fiveHourResetTime: fiveHourResetTimestamp,
         weeklyTokenLimit,
         weeklyTokensSpent,
         weeklyRemainingTokens,
         weeklyPercentageUsed,
         weeklyPercentageLeft,
+        weeklyResetTime: weeklyResetTimestamp,
         modelBreakdowns,
       },
     };
