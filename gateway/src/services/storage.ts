@@ -172,12 +172,19 @@ class StorageService {
     const fiveHourTokensSpent = fiveHourLogs.reduce((acc, l) => acc + (l.totalTokens || 0), 0);
     const weeklyTokensSpent = weeklyLogs.reduce((acc, l) => acc + (l.totalTokens || 0), 0);
 
-    // Dynamic quota configuration (Standard Pro / Flash limits)
-    const fiveHourTokenLimit = 250000;
-    const weeklyTokenLimit = 2000000;
+    // Dynamic quota configuration matching Antigravity Gemini tier quotas
+    // 5-Hour rolling window quota calibrated to Antigravity's current tier (approx. 70,000 active token window)
+    const fiveHourTokenLimit = 70000;
+    const weeklyTokenLimit = 1500000;
 
     const fiveHourRemainingTokens = Math.max(0, fiveHourTokenLimit - fiveHourTokensSpent);
     const weeklyRemainingTokens = Math.max(0, weeklyTokenLimit - weeklyTokensSpent);
+
+    const fiveHourPercentageUsed = Number(((fiveHourTokensSpent / fiveHourTokenLimit) * 100).toFixed(1));
+    const fiveHourPercentageLeft = Math.max(0, Number((100 - fiveHourPercentageUsed).toFixed(1)));
+
+    const weeklyPercentageUsed = Number(((weeklyTokensSpent / weeklyTokenLimit) * 100).toFixed(1));
+    const weeklyPercentageLeft = Math.max(0, Number((100 - weeklyPercentageUsed).toFixed(1)));
 
     // Grouping by model (active Antigravity Gemini, GPT-4o, etc.)
     const modelUsageMap = new Map<string, { model: string; tokens: number; cost: number; requests: number; fiveHourTokens: number; weeklyTokens: number }>();
@@ -198,8 +205,10 @@ class StorageService {
     const modelBreakdowns = Array.from(modelUsageMap.values()).map((item) => ({
       ...item,
       cost: Number(item.cost.toFixed(4)),
-      fiveHourRemainingTokens: Math.max(0, 100000 - item.fiveHourTokens),
-      weeklyRemainingTokens: Math.max(0, 750000 - item.weeklyTokens),
+      fiveHourRemainingTokens: Math.max(0, fiveHourTokenLimit - item.fiveHourTokens),
+      weeklyRemainingTokens: Math.max(0, weeklyTokenLimit - item.weeklyTokens),
+      fiveHourPercentageLeft: Math.max(0, Number((((fiveHourTokenLimit - item.fiveHourTokens) / fiveHourTokenLimit) * 100).toFixed(1))),
+      weeklyPercentageLeft: Math.max(0, Number((((weeklyTokenLimit - item.weeklyTokens) / weeklyTokenLimit) * 100).toFixed(1))),
     }));
 
     return {
@@ -221,11 +230,13 @@ class StorageService {
         fiveHourTokenLimit,
         fiveHourTokensSpent,
         fiveHourRemainingTokens,
-        fiveHourPercentageUsed: Number(((fiveHourTokensSpent / fiveHourTokenLimit) * 100).toFixed(1)),
+        fiveHourPercentageUsed,
+        fiveHourPercentageLeft,
         weeklyTokenLimit,
         weeklyTokensSpent,
         weeklyRemainingTokens,
-        weeklyPercentageUsed: Number(((weeklyTokensSpent / weeklyTokenLimit) * 100).toFixed(1)),
+        weeklyPercentageUsed,
+        weeklyPercentageLeft,
         modelBreakdowns,
       },
     };

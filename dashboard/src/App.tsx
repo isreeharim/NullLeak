@@ -55,10 +55,12 @@ interface AnalyticsSummary {
     fiveHourTokensSpent: number;
     fiveHourRemainingTokens: number;
     fiveHourPercentageUsed: number;
+    fiveHourPercentageLeft?: number;
     weeklyTokenLimit: number;
     weeklyTokensSpent: number;
     weeklyRemainingTokens: number;
     weeklyPercentageUsed: number;
+    weeklyPercentageLeft?: number;
     modelBreakdowns: Array<{
       model: string;
       tokens: number;
@@ -68,6 +70,8 @@ interface AnalyticsSummary {
       fiveHourRemainingTokens: number;
       weeklyTokens: number;
       weeklyRemainingTokens: number;
+      fiveHourPercentageLeft?: number;
+      weeklyPercentageLeft?: number;
     }>;
   };
 }
@@ -541,7 +545,7 @@ export function App() {
               <div className="p-5 rounded-xl border border-white/[0.08] bg-[#11131c]/60 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <div className="p-1.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                       <Clock className="w-4 h-4" />
                     </div>
                     <div>
@@ -549,29 +553,34 @@ export function App() {
                       <p className="text-xs text-slate-400">Rolling window limit across current active session</p>
                     </div>
                   </div>
-                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                    {analytics?.usageLimits?.fiveHourPercentageUsed || 0}% Used
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                      {analytics?.usageLimits?.fiveHourPercentageLeft ?? 100}% left
+                    </span>
+                    <span className="text-[11px] font-mono text-slate-500">
+                      ({analytics?.usageLimits?.fiveHourPercentageUsed || 0}% used)
+                    </span>
+                  </div>
                 </div>
 
                 <div className="pt-2">
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Remaining Tokens:</span>
-                    <span className="font-mono font-semibold text-emerald-400">
-                      {(analytics?.usageLimits?.fiveHourRemainingTokens ?? 250000).toLocaleString()} tokens
+                    <span className="text-slate-400">Remaining Quota:</span>
+                    <span className="font-mono font-semibold text-emerald-400 text-sm">
+                      {(analytics?.usageLimits?.fiveHourRemainingTokens ?? 70000).toLocaleString()} tokens
                     </span>
                   </div>
                   <div className="flex justify-between text-xs mt-1">
                     <span className="text-slate-400">Consumed / Quota:</span>
                     <span className="font-mono text-slate-300">
-                      {(analytics?.usageLimits?.fiveHourTokensSpent || 0).toLocaleString()} / {(analytics?.usageLimits?.fiveHourTokenLimit || 250000).toLocaleString()}
+                      {(analytics?.usageLimits?.fiveHourTokensSpent || 0).toLocaleString()} / {(analytics?.usageLimits?.fiveHourTokenLimit || 70000).toLocaleString()}
                     </span>
                   </div>
                   <div className="w-full bg-white/[0.08] rounded-full h-2 mt-3 overflow-hidden">
                     <div
-                      className="bg-gradient-to-r from-amber-400 to-amber-600 h-full rounded-full transition-all duration-300"
+                      className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full rounded-full transition-all duration-300"
                       style={{
-                        width: `${Math.min(100, analytics?.usageLimits?.fiveHourPercentageUsed || 0)}%`,
+                        width: `${Math.min(100, analytics?.usageLimits?.fiveHourPercentageLeft ?? 100)}%`,
                       }}
                     ></div>
                   </div>
@@ -590,29 +599,34 @@ export function App() {
                       <p className="text-xs text-slate-400">Rolling 7-day total token consumption ceiling</p>
                     </div>
                   </div>
-                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-                    {analytics?.usageLimits?.weeklyPercentageUsed || 0}% Used
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                      {analytics?.usageLimits?.weeklyPercentageLeft ?? 100}% left
+                    </span>
+                    <span className="text-[11px] font-mono text-slate-500">
+                      ({analytics?.usageLimits?.weeklyPercentageUsed || 0}% used)
+                    </span>
+                  </div>
                 </div>
 
                 <div className="pt-2">
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Remaining Tokens:</span>
-                    <span className="font-mono font-semibold text-emerald-400">
-                      {(analytics?.usageLimits?.weeklyRemainingTokens ?? 2000000).toLocaleString()} tokens
+                    <span className="text-slate-400">Remaining Quota:</span>
+                    <span className="font-mono font-semibold text-indigo-300 text-sm">
+                      {(analytics?.usageLimits?.weeklyRemainingTokens ?? 1500000).toLocaleString()} tokens
                     </span>
                   </div>
                   <div className="flex justify-between text-xs mt-1">
                     <span className="text-slate-400">Consumed / Quota:</span>
                     <span className="font-mono text-slate-300">
-                      {(analytics?.usageLimits?.weeklyTokensSpent || 0).toLocaleString()} / {(analytics?.usageLimits?.weeklyTokenLimit || 2000000).toLocaleString()}
+                      {(analytics?.usageLimits?.weeklyTokensSpent || 0).toLocaleString()} / {(analytics?.usageLimits?.weeklyTokenLimit || 1500000).toLocaleString()}
                     </span>
                   </div>
                   <div className="w-full bg-white/[0.08] rounded-full h-2 mt-3 overflow-hidden">
                     <div
                       className="bg-gradient-to-r from-indigo-500 to-cyan-400 h-full rounded-full transition-all duration-300"
                       style={{
-                        width: `${Math.min(100, analytics?.usageLimits?.weeklyPercentageUsed || 0)}%`,
+                        width: `${Math.min(100, analytics?.usageLimits?.weeklyPercentageLeft ?? 100)}%`,
                       }}
                     ></div>
                   </div>
@@ -664,13 +678,19 @@ export function App() {
                             {m.fiveHourTokens.toLocaleString()}
                           </td>
                           <td className="p-3 font-mono text-emerald-400">
-                            {m.fiveHourRemainingTokens.toLocaleString()}
+                            {m.fiveHourRemainingTokens.toLocaleString()}{' '}
+                            <span className="text-[10px] text-emerald-300 font-sans ml-1">
+                              ({m.fiveHourPercentageLeft ?? 100}% left)
+                            </span>
                           </td>
                           <td className="p-3 font-mono text-cyan-300">
                             {m.weeklyTokens.toLocaleString()}
                           </td>
                           <td className="p-3 font-mono text-emerald-400">
-                            {m.weeklyRemainingTokens.toLocaleString()}
+                            {m.weeklyRemainingTokens.toLocaleString()}{' '}
+                            <span className="text-[10px] text-cyan-300 font-sans ml-1">
+                              ({m.weeklyPercentageLeft ?? 100}% left)
+                            </span>
                           </td>
                           <td className="p-3 font-mono text-slate-200">
                             ${m.cost.toFixed(4)}
