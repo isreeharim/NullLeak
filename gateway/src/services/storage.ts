@@ -162,6 +162,46 @@ class StorageService {
       pii: log.piiRedactedCount,
     }));
 
+    const now = Date.now();
+    const fiveHoursAgo = new Date(now - 5 * 60 * 60 * 1000);
+    const oneWeekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+
+    const fiveHourLogs = logs.filter((l) => new Date(l.timestamp) >= fiveHoursAgo);
+    const weeklyLogs = logs.filter((l) => new Date(l.timestamp) >= oneWeekAgo);
+
+    const fiveHourTokensSpent = fiveHourLogs.reduce((acc, l) => acc + (l.totalTokens || 0), 0);
+    const weeklyTokensSpent = weeklyLogs.reduce((acc, l) => acc + (l.totalTokens || 0), 0);
+
+    // Dynamic quota configuration (Standard Pro / Flash limits)
+    const fiveHourTokenLimit = 250000;
+    const weeklyTokenLimit = 2000000;
+
+    const fiveHourRemainingTokens = Math.max(0, fiveHourTokenLimit - fiveHourTokensSpent);
+    const weeklyRemainingTokens = Math.max(0, weeklyTokenLimit - weeklyTokensSpent);
+
+    // Grouping by model (active Antigravity Gemini, GPT-4o, etc.)
+    const modelUsageMap = new Map<string, { model: string; tokens: number; cost: number; requests: number; fiveHourTokens: number; weeklyTokens: number }>();
+    for (const log of logs) {
+      const m = log.modelRequested || 'unknown';
+      const existing = modelUsageMap.get(m) || { model: m, tokens: 0, cost: 0, requests: 0, fiveHourTokens: 0, weeklyTokens: 0 };
+      existing.tokens += (log.totalTokens || 0);
+      existing.cost += (log.estimatedCostUsd || 0);
+      existing.requests += 1;
+
+      const logTime = new Date(log.timestamp);
+      if (logTime >= fiveHoursAgo) existing.fiveHourTokens += (log.totalTokens || 0);
+      if (logTime >= oneWeekAgo) existing.weeklyTokens += (log.totalTokens || 0);
+
+      modelUsageMap.set(m, existing);
+    }
+
+    const modelBreakdowns = Array.from(modelUsageMap.values()).map((item) => ({
+      ...item,
+      cost: Number(item.cost.toFixed(4)),
+      fiveHourRemainingTokens: Math.max(0, 100000 - item.fiveHourTokens),
+      weeklyRemainingTokens: Math.max(0, 750000 - item.weeklyTokens),
+    }));
+
     return {
       totalRequests,
       cacheHits,
@@ -177,6 +217,17 @@ class StorageService {
       timeline,
       totalFeedbackCount: this.feedbacks.length,
       positiveFeedbackCount: this.feedbacks.filter(f => f.rating === 'positive').length,
+      usageLimits: {
+        fiveHourTokenLimit,
+        fiveHourTokensSpent,
+        fiveHourRemainingTokens,
+        fiveHourPercentageUsed: Number(((fiveHourTokensSpent / fiveHourTokenLimit) * 100).toFixed(1)),
+        weeklyTokenLimit,
+        weeklyTokensSpent,
+        weeklyRemainingTokens,
+        weeklyPercentageUsed: Number(((weeklyTokensSpent / weeklyTokenLimit) * 100).toFixed(1)),
+        modelBreakdowns,
+      },
     };
   }
 

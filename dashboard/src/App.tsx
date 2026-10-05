@@ -16,7 +16,10 @@ import {
   ArrowUpRight,
   ThumbsUp,
   ThumbsDown,
-  MessageSquare
+  MessageSquare,
+  Clock,
+  Gauge,
+  Cpu
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -47,6 +50,26 @@ interface AnalyticsSummary {
     isHit: number;
     pii: number;
   }>;
+  usageLimits?: {
+    fiveHourTokenLimit: number;
+    fiveHourTokensSpent: number;
+    fiveHourRemainingTokens: number;
+    fiveHourPercentageUsed: number;
+    weeklyTokenLimit: number;
+    weeklyTokensSpent: number;
+    weeklyRemainingTokens: number;
+    weeklyPercentageUsed: number;
+    modelBreakdowns: Array<{
+      model: string;
+      tokens: number;
+      cost: number;
+      requests: number;
+      fiveHourTokens: number;
+      fiveHourRemainingTokens: number;
+      weeklyTokens: number;
+      weeklyRemainingTokens: number;
+    }>;
+  };
 }
 
 interface ApiKeyItem {
@@ -86,7 +109,7 @@ interface IFeedbackItem {
 }
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'playground' | 'keys' | 'logs' | 'feedback'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'usage' | 'playground' | 'keys' | 'logs' | 'feedback'>('overview');
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
   const [logs, setLogs] = useState<RequestLogItem[]>([]);
@@ -276,6 +299,17 @@ export function App() {
               >
                 <Activity className="w-3.5 h-3.5" />
                 <span>Overview</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('usage')}
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition ${
+                  activeTab === 'usage'
+                    ? 'bg-white/[0.08] text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Gauge className="w-3.5 h-3.5" />
+                <span>View Usage</span>
               </button>
               <button
                 onClick={() => setActiveTab('playground')}
@@ -493,6 +527,162 @@ export function App() {
                     />
                   </AreaChart>
                 </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW USAGE TAB (Weekly, 5-Hour Limit & Other Models) */}
+        {activeTab === 'usage' && (
+          <div className="space-y-6">
+            {/* Top Limit Health Indicators */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 5-Hour Rolling Limit Card */}
+              <div className="p-5 rounded-xl border border-white/[0.08] bg-[#11131c]/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-white">5-Hour Rate Quota</h3>
+                      <p className="text-xs text-slate-400">Rolling window limit across current active session</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                    {analytics?.usageLimits?.fiveHourPercentageUsed || 0}% Used
+                  </span>
+                </div>
+
+                <div className="pt-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Remaining Tokens:</span>
+                    <span className="font-mono font-semibold text-emerald-400">
+                      {(analytics?.usageLimits?.fiveHourRemainingTokens ?? 250000).toLocaleString()} tokens
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs mt-1">
+                    <span className="text-slate-400">Consumed / Quota:</span>
+                    <span className="font-mono text-slate-300">
+                      {(analytics?.usageLimits?.fiveHourTokensSpent || 0).toLocaleString()} / {(analytics?.usageLimits?.fiveHourTokenLimit || 250000).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="w-full bg-white/[0.08] rounded-full h-2 mt-3 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-amber-400 to-amber-600 h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${Math.min(100, analytics?.usageLimits?.fiveHourPercentageUsed || 0)}%`,
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Weekly Limit Card */}
+              <div className="p-5 rounded-xl border border-white/[0.08] bg-[#11131c]/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="p-1.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                      <Gauge className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-white">Weekly Allocation Limit</h3>
+                      <p className="text-xs text-slate-400">Rolling 7-day total token consumption ceiling</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                    {analytics?.usageLimits?.weeklyPercentageUsed || 0}% Used
+                  </span>
+                </div>
+
+                <div className="pt-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Remaining Tokens:</span>
+                    <span className="font-mono font-semibold text-emerald-400">
+                      {(analytics?.usageLimits?.weeklyRemainingTokens ?? 2000000).toLocaleString()} tokens
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs mt-1">
+                    <span className="text-slate-400">Consumed / Quota:</span>
+                    <span className="font-mono text-slate-300">
+                      {(analytics?.usageLimits?.weeklyTokensSpent || 0).toLocaleString()} / {(analytics?.usageLimits?.weeklyTokenLimit || 2000000).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="w-full bg-white/[0.08] rounded-full h-2 mt-3 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-indigo-500 to-cyan-400 h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${Math.min(100, analytics?.usageLimits?.weeklyPercentageUsed || 0)}%`,
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Per-Model Usage & Remaining Limit Table */}
+            <div className="p-5 rounded-xl border border-white/[0.08] bg-[#11131c]/60 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Model Consumption & Remaining Quotas</h3>
+                  <p className="text-xs text-slate-400">Breakdown for Antigravity Gemini, GPT-4o, and other upstream models</p>
+                </div>
+                <div className="flex items-center space-x-1.5 text-xs text-slate-400">
+                  <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Multi-Model Tracking</span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto rounded-lg border border-white/[0.06]">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-white/[0.02] text-slate-400 font-medium border-b border-white/[0.06]">
+                    <tr>
+                      <th className="p-3">Model</th>
+                      <th className="p-3">5-Hr Used</th>
+                      <th className="p-3">5-Hr Remaining</th>
+                      <th className="p-3">Weekly Used</th>
+                      <th className="p-3">Weekly Remaining</th>
+                      <th className="p-3">Total Spend ($)</th>
+                      <th className="p-3 text-right">Invocations</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.04]">
+                    {(!analytics?.usageLimits?.modelBreakdowns || analytics.usageLimits.modelBreakdowns.length === 0) ? (
+                      <tr>
+                        <td colSpan={7} className="p-6 text-center text-slate-500">
+                          No model activity recorded yet. Run queries in Antigravity or the Sandbox.
+                        </td>
+                      </tr>
+                    ) : (
+                      analytics.usageLimits.modelBreakdowns.map((m) => (
+                        <tr key={m.model} className="hover:bg-white/[0.02] transition">
+                          <td className="p-3 font-medium text-white flex items-center space-x-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                            <span className="font-mono text-xs">{m.model}</span>
+                          </td>
+                          <td className="p-3 font-mono text-amber-300">
+                            {m.fiveHourTokens.toLocaleString()}
+                          </td>
+                          <td className="p-3 font-mono text-emerald-400">
+                            {m.fiveHourRemainingTokens.toLocaleString()}
+                          </td>
+                          <td className="p-3 font-mono text-cyan-300">
+                            {m.weeklyTokens.toLocaleString()}
+                          </td>
+                          <td className="p-3 font-mono text-emerald-400">
+                            {m.weeklyRemainingTokens.toLocaleString()}
+                          </td>
+                          <td className="p-3 font-mono text-slate-200">
+                            ${m.cost.toFixed(4)}
+                          </td>
+                          <td className="p-3 font-mono text-slate-400 text-right">
+                            {m.requests}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
