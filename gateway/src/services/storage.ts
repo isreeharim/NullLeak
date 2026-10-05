@@ -1,4 +1,4 @@
-import { IOrganization, IApiKey, IRequestLog } from '../types.js';
+import { IOrganization, IApiKey, IRequestLog, IFeedback } from '../types.js';
 import { config } from '../config.js';
 import crypto from 'crypto';
 
@@ -9,6 +9,7 @@ class StorageService {
   private organizations: Map<string, IOrganization> = new Map();
   private apiKeys: Map<string, IApiKey> = new Map();
   private requestLogs: IRequestLog[] = [];
+  private feedbacks: IFeedback[] = [];
   private isConnectedToMongo: boolean = false;
 
   constructor() {
@@ -172,7 +173,26 @@ class StorageService {
       monthlySpendLimitUsd: org?.monthlySpendLimitUsd || 250,
       currentMonthSpendUsd: Number((org?.currentMonthSpendUsd || 0).toFixed(4)),
       timeline,
+      totalFeedbackCount: this.feedbacks.length,
+      positiveFeedbackCount: this.feedbacks.filter(f => f.rating === 'positive').length,
     };
+  }
+
+  public async saveFeedback(feedback: Omit<IFeedback, '_id' | 'createdAt'>): Promise<IFeedback> {
+    const doc: IFeedback = {
+      _id: `fb_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      ...feedback,
+      createdAt: new Date(),
+    };
+    this.feedbacks.unshift(doc);
+    if (this.feedbacks.length > 500) {
+      this.feedbacks.pop();
+    }
+    return doc;
+  }
+
+  public async getFeedbacks(limit: number = 50): Promise<IFeedback[]> {
+    return this.feedbacks.slice(0, limit);
   }
 }
 

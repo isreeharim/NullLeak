@@ -71,7 +71,31 @@ adminRouter.post('/sandbox/test-guardrails', (req: Request, res: Response) => {
   });
 });
 
-// 5. System Status
+// 5. User & Model Feedback Endpoints
+adminRouter.post('/feedback', async (req: Request, res: Response) => {
+  const { logId, promptSnippet, rating, category, comment, source } = req.body;
+  if (!rating || !['positive', 'negative'].includes(rating)) {
+    res.status(400).json({ error: 'Rating must be positive or negative' });
+    return;
+  }
+  const saved = await storage.saveFeedback({
+    logId,
+    promptSnippet,
+    rating,
+    category: category || 'general',
+    comment: comment || '',
+    source: source || 'dashboard',
+  });
+  res.status(201).json({ success: true, feedback: saved });
+});
+
+adminRouter.get('/feedback', async (req: Request, res: Response) => {
+  const limit = parseInt((req.query.limit as string) || '50', 10);
+  const feedbacks = await storage.getFeedbacks(limit);
+  res.json({ feedbacks });
+});
+
+// 6. System Status
 adminRouter.get('/status', (req: Request, res: Response) => {
   res.json({
     status: 'online',

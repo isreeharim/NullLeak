@@ -38,6 +38,17 @@ export interface IRequestLog {
   responseSnippet?: string;
 }
 
+export interface IFeedback {
+  _id: string;
+  logId?: string;
+  promptSnippet?: string;
+  rating: 'positive' | 'negative';
+  category: 'guardrail_accuracy' | 'cache_quality' | 'latency' | 'general';
+  comment: string;
+  source: 'dashboard' | 'mcp' | 'api';
+  createdAt: Date;
+}
+
 export interface IChatMessage {
   role: 'system' | 'user' | 'assistant' | 'function';
   content: string;
